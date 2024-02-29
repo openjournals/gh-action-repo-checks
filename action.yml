@@ -1,0 +1,37 @@
+name: Open Journal Submission Checks
+description: Perform checks on submission's repository and paper
+inputs:
+  issue_id:
+    description: The review issue id for the paper
+    required: true
+  repository_url:
+    description: The repository URL of the submission containing the paper file
+    required: true
+  branch:
+    description: Git branch where the paper is located
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Clone repository
+      run: |
+        [[ "${{ inputs.branch }}" == "" ]] && (git clone --single-branch ${{ inputs.repository_url }} . ) || (git clone --single-branch --branch ${{ inputs.branch }} ${{ inputs.repository_url }} .)
+    - name: Run CLOC
+      run: |
+        sudo apt install cloc
+        cloc --quiet --report-file=cloc-results.txt .
+        echo -e "**Software report:**\n\n\`\`\`\n$(cat cloc-results.txt)\n\`\`\`" > cloc-results.txt
+    - name: List Git Authors
+      run: |
+        (git shortlog -sn --no-merges --branches .) > git-authors.txt
+        echo -e "**Commit count by author**:\n\n\`\`\`\n$(cat git-authors.txt)\n\`\`\`" > git-authors.txt
+    - name: Post repo analysis
+      run: |
+        echo -e "$(cat cloc-results.txt)\n\n$(cat git-authors.txt)\n" > repo-analysis.txt
+        gh issue comment ${{ inputs.issue_id }} --body-file repo-analysis.txt
+
+branding:
+  icon: check-circle
+  color: blue
