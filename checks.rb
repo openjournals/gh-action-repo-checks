@@ -35,7 +35,7 @@ else
   if paper_file.text =~ /# Statement of Need/i
     statemend_of_need_msg = "✅ The paper includes a `Statement of need` section"
   else
-    statemend_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper")
+    statemend_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
   end
 
   # Build message results
@@ -69,7 +69,7 @@ system("gh issue edit #{issue_id} --add-label top_3") unless top_3.empty?
 license = Licensee.project(".").license
 
 if license.nil?
-  license_info_msg = "🔴 Failed to discover a valid open source license")
+  license_info_msg = "🔴 Failed to discover a valid open source license"
 else
   license_info_msg = "🟡 License found: `#{license.name}` ([Check here](https://opensource.org/licenses) for OSI approval)"
   license_xml_path = File.expand_path "#{license.spdx_id}.xml", Licensee::License.spdx_dir
