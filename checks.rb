@@ -57,6 +57,14 @@ end
 # Post paper info
 system("gh issue comment #{issue_id} --body-file paper-analysis.txt")
 
+# Label issue with the top 3 detected languages
+repo = Rugged::Repository.new(path)
+project = Linguist::Repository.new(repo, repo.head.target_id)
+ordered_languages = project.languages.sort_by { |_, size| size }.reverse
+top_3 = ordered_languages.first(3).map {|l,s| l}
+
+system("gh issue edit #{issue_id} --add-label top_3") unless top_3.empty?
+
 # Detect license
 license = Licensee.project(".").license
 
@@ -75,7 +83,6 @@ else
   end
 end
 
-# Build message results
 license_info = <<~LICENSEFILEINFO
   **License info: **
 
@@ -87,11 +94,3 @@ File.open("license-information.txt", "w") do |f|
   f.write license_info
 end
 system("gh issue comment #{issue_id} --body-file license-information.txt")
-
-# Label issue with the top 3 detected languages
-repo = Rugged::Repository.new(path)
-project = Linguist::Repository.new(repo, repo.head.target_id)
-ordered_languages = project.languages.sort_by { |_, size| size }.reverse
-top_3 = ordered_languages.first(3).map {|l,s| l}
-
-system("gh issue edit #{issue_id} --add-label top_3") unless top_3.empty?
