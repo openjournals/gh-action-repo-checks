@@ -76,7 +76,7 @@ else
   if File.exist? license_xml_path
     raw_xml = File.read(license_xml_path, encoding: "utf-8")
     if raw_xml.match?(/<license isOsiApproved="true" /)
-      license_info_msg = "✅ License found: `#{license.name}`(Valid open source [OSI approved](https://opensource.org/licenses) license)"
+      license_info_msg = "✅ License found: `#{license.name}` (Valid open source [OSI approved](https://opensource.org/licenses) license)"
     elsif raw_xml.match?(/<license isOsiApproved="false" /)
       license_info_msg = "🔴 License found: `#{license.name}` (Not [OSI approved](https://opensource.org/licenses))"
     end
