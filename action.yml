@@ -35,6 +35,23 @@ runs:
       run: |
         echo -e "$(cat cloc-results.txt)\n\n$(cat git-authors.txt)\n" > repo-analysis.txt
         gh issue comment ${{ inputs.issue_id }} --body-file repo-analysis.txt
+    - name: Install Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3.0
+        bundler-cache: true
+        cache-version: paper-files
+        bundler: Gemfile.lock
+        working-directory: ${{ github.action_path }}
+    - name: Analyze paper file
+      shell: bash
+      env:
+        ISSUE_ID: ${{ inputs.issue_id }}
+        REPO_URL: ${{ inputs.repository_url }}
+        PAPER_BRANCH: ${{ inputs.branch }}
+        BUNDLE_GEMFILE: ${{ github.action_path }}/Gemfile
+      run: |
+        bundle exec ruby ${{ github.action_path }}/checks.rb
 
 branding:
   icon: check-circle
