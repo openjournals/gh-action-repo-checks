@@ -27,12 +27,12 @@ if paper_path.nil?
 else
 
   # Count paper file length
-  word_count = Open3.capture3("cat #{paper_file.paper_path} | wc -w")[0].to_i
+  word_count = Open3.capture3("cat #{paper_path} | wc -w")[0].to_i
   word_count_msg = "Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Detect a "Statement of need" section
   paper_file_text = File.open(@paper_path).read
-  if paper_file.text =~ /# Statement of Need/i
+  if paper_file_text =~ /# Statement of Need/i
     statemend_of_need_msg = "✅ The paper includes a `Statement of need` section"
   else
     statemend_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
