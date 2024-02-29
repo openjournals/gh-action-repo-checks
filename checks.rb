@@ -31,7 +31,7 @@ else
   word_count_msg = "Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Detect a "Statement of need" section
-  paper_file_text = File.open(@paper_path).read
+  paper_file_text = File.open(paper_path).read
   if paper_file_text =~ /# Statement of Need/i
     statemend_of_need_msg = "✅ The paper includes a `Statement of need` section"
   else
