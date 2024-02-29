@@ -18,7 +18,7 @@ Find.find(".").each do |path|
 end
 
 if paper_path.nil?
-  error_msg = "**Paper file info: **\n\n⚠️ Failed to find a paper file in #{repo_url}"
+  error_msg = "**Paper file info**:\n\n⚠️ Failed to find a paper file in #{repo_url}"
   error_msg += " (branch: #{repo_branch})" unless (repo_branch == "" || repo_branch.nil?)
 
   File.open("paper-analysis.txt", "w") do |f|
@@ -28,7 +28,7 @@ else
 
   # Count paper file length
   word_count = Open3.capture3("cat #{paper_path} | wc -w")[0].to_i
-  word_count_msg = "Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
+  word_count_msg = "📄 Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Detect a "Statement of need" section
   paper_file_text = File.open(paper_path).read
@@ -58,7 +58,7 @@ end
 system("gh issue comment #{issue_id} --body-file paper-analysis.txt")
 
 # Label issue with the top 3 detected languages
-repo = Rugged::Repository.new(path)
+repo = Rugged::Repository.new(".")
 project = Linguist::Repository.new(repo, repo.head.target_id)
 ordered_languages = project.languages.sort_by { |_, size| size }.reverse
 top_3 = ordered_languages.first(3).map {|l,s| l}
