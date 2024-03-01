@@ -40,7 +40,7 @@ runs:
       with:
         ruby-version: 3.3.0
         bundler-cache: true
-        cache-version: paper-files
+        cache-version: submission-checks
         bundler: Gemfile.lock
         working-directory: ${{ github.action_path }}
     - name: Analyze paper file
