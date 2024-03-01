@@ -27,6 +27,7 @@ The action accepts the following inputs:
 ### ENV
 
 For the action to be able to add labels and post comments to the review issue there must be two env vars setted with valid values:
+
 - **GITHUB_TOKEN**: The token of the user posting the results of the checks
 - **GH_REPO**: The repository where the review issue is found, in `username/repo-name` format
 
