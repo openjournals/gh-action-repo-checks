@@ -6,7 +6,7 @@ This action runs several checks on the software repository submitted for review 
 - **Detect languages**: This will detect the languages used in the repository and label the issue with the top three used languages.
 - **Detect license**: This will look for an Open Source License in the target repo and post the result as a comment in the issue.
 
-The action also looks for a `paper.md` file in the specified repository and post information on:
+The action also looks for a `paper.md` file in the specified repository and post back information on:
 
 - **Wordcount**: This will count the number of words in the paper file.
 - **Detect statement of need**: This check will look for an `Statement of need` section in the paper content.
