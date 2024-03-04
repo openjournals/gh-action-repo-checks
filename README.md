@@ -20,8 +20,8 @@ Usually this action is used as a step in a workflow.
 
 The action accepts the following inputs:
 
-- **issue_id**: Required. The review issue id of the submission for the paper.
-- **repository_url**: Required. The repository URL of the submission containing the software and the paper file.
+- **issue_id**: Required. The id of the review issue for the submission.
+- **repository_url**: Required. The repository URL containing the software and the paper file.
 - **branch**: Optional. Git branch where the paper is located.
 
 ### ENV
