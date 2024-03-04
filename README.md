@@ -1,4 +1,4 @@
-# Open Journals :: Repo and paper checks
+# Open Journals :: Repository and paper checks
 
 This action runs several checks on the software repository submitted for review to Open Journals:
 
