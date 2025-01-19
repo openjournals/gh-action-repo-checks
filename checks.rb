@@ -28,7 +28,8 @@ else
 
   # Count paper file length
   word_count = Open3.capture3("cat #{paper_path} | wc -w")[0].to_i
-  word_count_msg = "📄 Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
+  word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1200 ? "⚠️" : "📄")
+  word_count_msg = "#{word_count_icon} Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Detect a "Statement of need" section
   paper_file_text = File.open(paper_path).read
