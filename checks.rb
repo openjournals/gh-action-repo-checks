@@ -8,7 +8,236 @@ issue_id = ENV["ISSUE_ID"]
 repo_url = ENV["REPO_URL"]
 repo_branch = ENV["PAPER_BRANCH"]
 
+# Helper method to detect the first commit date
+def detect_first_commit_date(repo)
+  walker = Rugged::Walker.new(repo)
+  walker.sorting(Rugged::SORT_DATE | Rugged::SORT_REVERSE)
+  walker.push(repo.head.target_id)
+
+  first_commit = walker.first
+  return nil if first_commit.nil?
+
+  {
+    date: first_commit.time.strftime("%B %d, %Y"),
+    timestamp: first_commit.time.to_i
+  }
+end
+
+# Helper method to detect repo dumps (rapid code additions)
+def detect_repo_dump(repo)
+  walker = Rugged::Walker.new(repo)
+  walker.sorting(Rugged::SORT_DATE | Rugged::SORT_REVERSE)
+  walker.push(repo.head.target_id)
+
+  commits = walker.to_a
+  return nil if commits.length < 2
+
+  # Calculate total insertions (excluding binary files)
+  total_insertions = 0
+  commits.each do |commit|
+    next if commit.parents.empty?
+    diff = commit.parents.first.diff(commit)
+    diff.each_patch do |patch|
+      next if patch.delta.binary?
+      total_insertions += patch.stat[0] # stat returns [additions, deletions]
+    end
+  end
+
+  return nil if total_insertions == 0
+
+  # Analyze 48-hour windows and collect all results
+  windows = []
+
+  commits.each_with_index do |commit, idx|
+    window_end = commit.time
+    window_start = window_end - (48 * 60 * 60) # 48 hours
+
+    window_insertions = 0
+    window_commits = []
+    commits[0..idx].each do |window_commit|
+      next if window_commit.time < window_start
+      next if window_commit.parents.empty?
+
+      commit_insertions = 0
+      diff = window_commit.parents.first.diff(window_commit)
+      diff.each_patch do |patch|
+        next if patch.delta.binary?
+        commit_insertions += patch.stat[0] # stat returns [additions, deletions]
+      end
+
+      if commit_insertions > 0
+        window_insertions += commit_insertions
+        window_commits << window_commit
+      end
+    end
+
+    next if window_insertions == 0
+
+    percentage = (window_insertions.to_f / total_insertions * 100).round(1)
+
+    # Get first and last commit SHAs in the window
+    first_sha = window_commits.first&.oid&.to_s
+    last_sha = window_commits.last&.oid&.to_s
+
+    windows << {
+      percentage: percentage,
+      window_start: window_start,
+      window_end: window_end,
+      insertions: window_insertions,
+      first_sha: first_sha,
+      last_sha: last_sha
+    }
+  end
+
+  # Sort by percentage descending
+  sorted_windows = windows.sort_by { |w| -w[:percentage] }
+
+  # Deduplicate overlapping windows - keep only non-overlapping top windows
+  top_windows = []
+  sorted_windows.each do |window|
+    # Check if this window overlaps significantly with any already selected window
+    overlaps = top_windows.any? do |selected|
+      # Windows overlap if they share any time period
+      !(window[:window_end] < selected[:window_start] || window[:window_start] > selected[:window_end])
+    end
+
+    # If it doesn't overlap, or if we have less than 3, add it
+    unless overlaps
+      top_windows << window
+      break if top_windows.length >= 3
+    end
+  end
+
+  return nil if top_windows.empty?
+
+  # Add signal levels to top windows
+  top_windows.each do |window|
+    window[:signal] = if window[:percentage] >= 75
+      "critical"
+    elsif window[:percentage] >= 50
+      "strong"
+    elsif window[:percentage] >= 25
+      "moderate"
+    else
+      "healthy"
+    end
+  end
+
+  top_windows
+end
+
+# Helper method to parse GitHub repo URL
+def parse_github_url(repo_url)
+  return nil if repo_url.nil? || repo_url.empty?
+
+  # Match github.com URLs
+  match = repo_url.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/i)
+  return nil unless match
+
+  {
+    owner: match[1],
+    repo: match[2]
+  }
+end
+
+# Helper method to build repository history section
+def build_repository_history_section(repo, repo_url)
+  sections = []
+
+  # First commit date
+  first_commit_info = detect_first_commit_date(repo)
+  if first_commit_info
+    sections << "**Repository age:** First commit on #{first_commit_info[:date]}"
+  end
+
+  # Repo dump detection - now returns top 3 windows
+  top_windows = detect_repo_dump(repo)
+  if top_windows && top_windows.any? { |w| w[:percentage] >= 25 }
+    # Parse GitHub URL for compare links
+    github_info = parse_github_url(repo_url)
+
+    # Build table header
+    table = "\n**Code distribution (top 3 48-hour windows):**\n\n"
+    table += "| Period | Insertions | % of Total | Signal | View Changes |\n"
+    table += "|--------|------------|------------|--------|-------------|\n"
+
+    top_windows.each do |window|
+      icon = case window[:signal]
+      when "critical" then "🔴"
+      when "strong" then "🟠"
+      when "moderate" then "🟡"
+      else "🟢"
+      end
+
+      window_start_date = window[:window_start].strftime("%b %d, %Y")
+      window_end_date = window[:window_end].strftime("%b %d, %Y")
+      period = "#{window_start_date} - #{window_end_date}"
+
+      signal_text = icon
+
+      # Create compare link if GitHub
+      if github_info && window[:first_sha] && window[:last_sha]
+        if window[:first_sha] == window[:last_sha]
+          # Single commit - link to the commit directly
+          commit_url = "https://github.com/#{github_info[:owner]}/#{github_info[:repo]}/commit/#{window[:last_sha]}"
+          view_link = "[View commit](#{commit_url})"
+        else
+          # Multiple commits - show compare view
+          # Use first_sha^...last_sha to include the first commit in the range
+          compare_url = "https://github.com/#{github_info[:owner]}/#{github_info[:repo]}/compare/#{window[:first_sha]}^...#{window[:last_sha]}"
+          view_link = "[View diff](#{compare_url})"
+        end
+      else
+        view_link = "-"
+      end
+
+      table += "| #{period} | #{window[:insertions]} | #{window[:percentage]}% | #{signal_text} | #{view_link} |\n"
+    end
+
+    sections << table
+  end
+
+  return nil if sections.empty?
+
+  "\n### Repository History\n\n" + sections.join("\n\n")
+end
+
 paper_path = nil
+
+# Build consolidated repository analysis report
+repo = Rugged::Repository.new(".")
+
+# Get CLOC results
+cloc_output = Open3.capture3("cloc --quiet .")[0].strip
+
+# Get git authors
+git_authors = Open3.capture3("git shortlog -sn --no-merges --branches .")[0].strip
+
+# Build repository history section
+repo_history = build_repository_history_section(repo, repo_url)
+
+# Consolidate into single report
+repo_analysis_report = <<~REPOANALYSIS
+  ## Repository Analysis Report
+
+  ### Software Summary
+
+  ```
+  #{cloc_output}
+  ```
+
+  ### Commit Count by Author
+
+  ```
+  #{git_authors}
+  ```
+  #{repo_history}
+REPOANALYSIS
+
+File.open("repo-analysis.txt", "w") do |f|
+  f.write repo_analysis_report
+end
+system("gh issue comment #{issue_id} --body-file repo-analysis.txt")
 
 Find.find(".").each do |path|
   if path =~ /\/paper\.tex$|\/paper\.md$/
@@ -59,7 +288,6 @@ end
 system("gh issue comment #{issue_id} --body-file paper-analysis.txt")
 
 # Label issue with the top 3 detected languages
-repo = Rugged::Repository.new(".")
 project = Linguist::Repository.new(repo, repo.head.target_id)
 ordered_languages = project.languages.sort_by { |_, size| size }.reverse
 top_3 = ordered_languages.first(3).map {|l,s| l}
