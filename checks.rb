@@ -3,6 +3,8 @@ require "open3"
 require "rugged"
 require "linguist"
 require "licensee"
+require "json"
+require "set"
 
 issue_id = ENV["ISSUE_ID"]
 repo_url = ENV["REPO_URL"]
@@ -140,6 +142,152 @@ def parse_github_url(repo_url)
   }
 end
 
+# Helper method to get external engagement metrics
+def get_external_engagement(repo_url)
+  github_info = parse_github_url(repo_url)
+  return nil unless github_info
+
+  repo_name = "#{github_info[:owner]}/#{github_info[:repo]}"
+
+  # Get contributors via API
+  puts "DEBUG: Fetching contributors for #{repo_name}..."
+  contributors_stdout, contributors_stderr, contributors_status = Open3.capture3("gh api repos/#{repo_name}/contributors --paginate --jq 'length'")
+  puts "DEBUG: Contributors command exit status: #{contributors_status.exitstatus}"
+  puts "DEBUG: Contributors stderr: #{contributors_stderr}" unless contributors_stderr.empty?
+
+  contributor_count = contributors_status.success? ? contributors_stdout.strip.to_i : 0
+
+  # Get releases
+  puts "DEBUG: Fetching releases for #{repo_name}..."
+  releases_stdout, releases_stderr, releases_status = Open3.capture3("gh release list --repo #{repo_name} --limit 1000 --json tagName")
+  puts "DEBUG: Releases command exit status: #{releases_status.exitstatus}"
+  puts "DEBUG: Releases stderr: #{releases_stderr}" unless releases_stderr.empty?
+
+  release_count = 0
+  if releases_status.success?
+    begin
+      releases = JSON.parse(releases_stdout)
+      release_count = releases.size
+    rescue JSON::ParserError
+      release_count = 0
+    end
+  end
+
+  # Get stars and forks via API
+  puts "DEBUG: Fetching repo metadata for #{repo_name}..."
+  repo_stdout, repo_stderr, repo_status = Open3.capture3("gh api repos/#{repo_name} --jq '{stars: .stargazers_count, forks: .forks_count}'")
+  puts "DEBUG: Repo metadata exit status: #{repo_status.exitstatus}"
+  puts "DEBUG: Repo metadata stderr: #{repo_stderr}" unless repo_stderr.empty?
+
+  stars = 0
+  forks = 0
+  if repo_status.success?
+    begin
+      repo_data = JSON.parse(repo_stdout)
+      stars = repo_data["stars"] || 0
+      forks = repo_data["forks"] || 0
+    rescue JSON::ParserError
+      stars = 0
+      forks = 0
+    end
+  end
+
+  # Get issues with comments
+  puts "DEBUG: Fetching issues for #{repo_name}..."
+  issues_stdout, issues_stderr, issues_status = Open3.capture3("gh issue list --repo #{repo_name} --limit 1000 --state all --json author,comments")
+  puts "DEBUG: Issues command exit status: #{issues_status.exitstatus}"
+  puts "DEBUG: Issues stdout length: #{issues_stdout.length}"
+  puts "DEBUG: Issues stderr: #{issues_stderr}" unless issues_stderr.empty?
+
+  # Get PRs with comments and reviews
+  puts "DEBUG: Fetching PRs for #{repo_name}..."
+  prs_stdout, prs_stderr, prs_status = Open3.capture3("gh pr list --repo #{repo_name} --limit 1000 --state all --json author,comments,reviews")
+  puts "DEBUG: PRs command exit status: #{prs_status.exitstatus}"
+  puts "DEBUG: PRs stdout length: #{prs_stdout.length}"
+  puts "DEBUG: PRs stderr: #{prs_stderr}" unless prs_stderr.empty?
+
+  return nil unless issues_status.success? && prs_status.success?
+
+  begin
+    issues = JSON.parse(issues_stdout)
+    prs = JSON.parse(prs_stdout)
+    puts "DEBUG: Parsed #{issues.size} issues and #{prs.size} PRs"
+
+    # Collect all unique non-author participants (commenters and reviewers)
+    participants = Set.new
+
+    # Process issues - count comment authors
+    issues.each do |item|
+      author = item["author"]&.fetch("login", nil)
+      next unless author
+
+      item["comments"]&.each do |comment|
+        login = comment["author"]&.fetch("login", nil)
+        participants.add(login) if login && login != author
+      end
+    end
+
+    # Process PRs - count comment and review authors
+    prs.each do |item|
+      author = item["author"]&.fetch("login", nil)
+      next unless author
+
+      item["comments"]&.each do |comment|
+        login = comment["author"]&.fetch("login", nil)
+        participants.add(login) if login && login != author
+      end
+
+      item["reviews"]&.each do |review|
+        login = review["author"]&.fetch("login", nil)
+        participants.add(login) if login && login != author
+      end
+    end
+
+    puts "DEBUG: Found #{participants.size} unique non-author participants"
+
+    {
+      unique_participants: participants.size,
+      issue_count: issues.size,
+      pr_count: prs.size,
+      contributor_count: contributor_count,
+      release_count: release_count,
+      stars: stars,
+      forks: forks
+    }
+  rescue JSON::ParserError, StandardError => e
+    puts "DEBUG: Error parsing JSON or processing data: #{e.message}"
+    puts "DEBUG: Backtrace: #{e.backtrace.first(3).join("\n")}"
+    nil
+  end
+end
+
+# Helper method to build external engagement section
+def build_external_engagement_section(repo_url)
+  engagement = get_external_engagement(repo_url)
+
+  # Only show section for GitHub repos
+  github_info = parse_github_url(repo_url)
+  return nil unless github_info
+
+  section = "\n### GitHub Activity Metrics\n\n"
+
+  if engagement
+    section += "| Metric | Count |\n"
+    section += "|--------|------:|\n"
+    section += "| GitHub stars | #{engagement[:stars]} |\n"
+    section += "| Forks | #{engagement[:forks]} |\n"
+    section += "| GitHub contributors | #{engagement[:contributor_count]} |\n"
+    section += "| Releases | #{engagement[:release_count]} |\n"
+    section += "| Total issues | #{engagement[:issue_count]} |\n"
+    section += "| Total pull requests | #{engagement[:pr_count]} |\n"
+    section += "| Unique commenters/reviewers (excluding authors) | #{engagement[:unique_participants]} |\n"
+  else
+    section += "Unable to fetch GitHub activity data\n"
+  end
+
+  section
+end
+
 # Helper method to build repository history section
 def build_repository_history_section(repo, repo_url)
   sections = []
@@ -216,6 +364,9 @@ git_authors = Open3.capture3("git shortlog -sn --no-merges --branches .")[0].str
 # Build repository history section
 repo_history = build_repository_history_section(repo, repo_url)
 
+# Build external engagement section
+external_engagement = build_external_engagement_section(repo_url)
+
 # Consolidate into single report
 repo_analysis_report = <<~REPOANALYSIS
   ## Repository Analysis Report
@@ -232,6 +383,7 @@ repo_analysis_report = <<~REPOANALYSIS
   #{git_authors}
   ```
   #{repo_history}
+  #{external_engagement}
 REPOANALYSIS
 
 File.open("repo-analysis.txt", "w") do |f|
