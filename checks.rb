@@ -269,7 +269,7 @@ def build_external_engagement_section(repo_url)
   github_info = parse_github_url(repo_url)
   return nil unless github_info
 
-  section = "\n### GitHub Activity Metrics\n\n"
+  section = "\n## GitHub Activity Metrics\n\n"
 
   if engagement
     section += "| Metric | Count |\n"
@@ -347,7 +347,7 @@ def build_repository_history_section(repo, repo_url)
 
   return nil if sections.empty?
 
-  "\n### Repository History\n\n" + sections.join("\n\n")
+  "\n## Repository History\n\n" + sections.join("\n\n")
 end
 
 paper_path = nil
@@ -371,13 +371,13 @@ external_engagement = build_external_engagement_section(repo_url)
 repo_analysis_report = <<~REPOANALYSIS
   ## Repository Analysis Report
 
-  ### Software Summary
+  ### Code breakdown
 
   ```
   #{cloc_output}
   ```
 
-  ### Commit Count by Author
+  #### Commit Count by Author
 
   ```
   #{git_authors}
