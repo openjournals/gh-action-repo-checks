@@ -19,22 +19,10 @@ runs:
       shell: bash
       run: |
         [[ "${{ inputs.branch }}" == "" ]] && (git clone --single-branch ${{ inputs.repository_url }} . ) || (git clone --single-branch --branch ${{ inputs.branch }} ${{ inputs.repository_url }} .)
-    - name: Run CLOC
+    - name: Install cloc
       shell: bash
       run: |
         sudo apt install cloc
-        cloc --quiet --report-file=cloc-results.txt .
-        echo -e "**Software report:**\n\n\`\`\`\n$(cat cloc-results.txt)\n\`\`\`" > cloc-results.txt
-    - name: List Git Authors
-      shell: bash
-      run: |
-        (git shortlog -sn --no-merges --branches .) > git-authors.txt
-        echo -e "**Commit count by author**:\n\n\`\`\`\n$(cat git-authors.txt)\n\`\`\`" > git-authors.txt
-    - name: Post repo analysis
-      shell: bash
-      run: |
-        echo -e "$(cat cloc-results.txt)\n\n$(cat git-authors.txt)\n" > repo-analysis.txt
-        gh issue comment ${{ inputs.issue_id }} --body-file repo-analysis.txt
     - name: Install Ruby
       uses: ruby/setup-ruby@v1
       with:
