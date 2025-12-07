@@ -409,8 +409,6 @@ else
 
   # Count paper file length
   word_count = Open3.capture3("cat #{paper_path} | wc -w")[0].to_i
-  word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1200 ? "⚠️" : "📄")
-  word_count_msg = "#{word_count_icon} Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Read paper content once
   paper_file_text = File.open(paper_path).read
@@ -418,6 +416,16 @@ else
   # Check if issue has pre-2026-submission label
   labels_output = Open3.capture3("gh issue view #{issue_id} --json labels --jq '.labels[].name'")[0]
   is_pre_2026 = labels_output.include?("pre-2026-submission")
+
+  # Apply different word count thresholds based on submission type
+  if is_pre_2026
+    # Pre-2026 papers: original thresholds (target ~1000-1200 words)
+    word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1200 ? "⚠️" : "📄")
+  else
+    # 2026+ papers: expanded thresholds (target ~1500-1800 words)
+    word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1800 ? "⚠️" : "📄")
+  end
+  word_count_msg = "#{word_count_icon} Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
   # Check for required sections
 
