@@ -409,24 +409,67 @@ else
 
   # Count paper file length
   word_count = Open3.capture3("cat #{paper_path} | wc -w")[0].to_i
-  word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1200 ? "⚠️" : "📄")
+
+  # Read paper content once
+  paper_file_text = File.open(paper_path).read
+
+  # Check if issue has pre-2026-submission label
+  labels_output = Open3.capture3("gh issue view #{issue_id} --json labels --jq '.labels[].name'")[0]
+  is_pre_2026 = labels_output.include?("pre-2026-submission")
+
+  # Apply different word count thresholds based on submission type
+  if is_pre_2026
+    # Pre-2026 papers: original thresholds (target ~1000-1200 words)
+    word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1200 ? "⚠️" : "📄")
+  else
+    # 2026+ papers: expanded thresholds (target ~1500-1800 words)
+    word_count_icon = word_count > 1999 ? "🚨" : (word_count > 1800 ? "⚠️" : "📄")
+  end
   word_count_msg = "#{word_count_icon} Wordcount for `#{File.basename(paper_path)}` is **#{word_count}**"
 
-  # Detect a "Statement of need" section
-  paper_file_text = File.open(paper_path).read
+  # Check for required sections
+
+  # 1. Statement of need (always required)
   if paper_file_text =~ /# Statement of Need/i
-    statemend_of_need_msg = "✅ The paper includes a `Statement of need` section"
+    statement_of_need_msg = "✅ The paper includes a `Statement of need` section"
   else
-    statemend_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
+    statement_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
+  end
+
+  # New sections (only checked if NOT pre-2026)
+  section_checks = []
+  unless is_pre_2026
+    # 2. Software Design
+    if paper_file_text =~ /# Software Design/i
+      section_checks << "✅ The paper includes a `Software Design` section"
+    else
+      section_checks << "🔴 Failed to discover a `Software Design` section in paper"
+    end
+
+    # 3. Research Impact Statement
+    if paper_file_text =~ /# Research Impact( Statement)?/i
+      section_checks << "✅ The paper includes a `Research Impact Statement` section"
+    else
+      section_checks << "🔴 Failed to discover a `Research Impact Statement` section in paper"
+    end
+
+    # 4. AI usage disclosure
+    if paper_file_text =~ /# AI (usage|use) disclosure/i
+      section_checks << "✅ The paper includes an `AI usage disclosure` section"
+    else
+      section_checks << "🔴 Failed to discover an `AI usage disclosure` section in paper"
+    end
   end
 
   # Build message results
+  section_messages = [statement_of_need_msg, *section_checks].join("\n\n    ")
+
   paper_info = <<~PAPERFILEINFO
     **Paper file info**:
 
     #{word_count_msg}
 
-    #{statemend_of_need_msg}
+    #{section_messages}
 
   PAPERFILEINFO
 
