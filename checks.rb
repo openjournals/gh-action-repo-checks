@@ -439,21 +439,28 @@ else
   # New sections (only checked if NOT pre-2026)
   section_checks = []
   unless is_pre_2026
-    # 2. Software Design
+    # 2. State of the Field
+    if paper_file_text =~ /# State of the Field/i
+      section_checks << "✅ The paper includes a `State of the Field` section"
+    else
+      section_checks << "🔴 Failed to discover a `State of the Field` section in paper"
+    end
+
+    # 3. Software Design
     if paper_file_text =~ /# Software Design/i
       section_checks << "✅ The paper includes a `Software Design` section"
     else
       section_checks << "🔴 Failed to discover a `Software Design` section in paper"
     end
 
-    # 3. Research Impact Statement
+    # 4. Research Impact Statement
     if paper_file_text =~ /# Research Impact( Statement)?/i
       section_checks << "✅ The paper includes a `Research Impact Statement` section"
     else
       section_checks << "🔴 Failed to discover a `Research Impact Statement` section in paper"
     end
 
-    # 4. AI usage disclosure
+    # 5. AI usage disclosure
     if paper_file_text =~ /# AI (usage|use) disclosure/i
       section_checks << "✅ The paper includes an `AI usage disclosure` section"
     else

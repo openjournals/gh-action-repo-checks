@@ -10,6 +10,7 @@ The action also looks for a `paper.md` file in the specified repository and post
 
 - **Wordcount**: This will count the number of words in the paper file.
 - **Detect statement of need**: This check will look for a `Statement of need` section in the paper content.
+- **Detect state of the field section**: For submissions without the `pre-2026-submission` label, this check will look for a `State of the Field` section in the paper.
 - **Detect software design section**: For submissions without the `pre-2026-submission` label, this check will look for a `Software Design` section in the paper.
 - **Detect research impact statement**: For submissions without the `pre-2026-submission` label, this check will look for a `Research Impact Statement` section in the paper.
 - **Detect AI usage disclosure**: For submissions without the `pre-2026-submission` label, this check will look for an `AI usage disclosure` section in the paper.
