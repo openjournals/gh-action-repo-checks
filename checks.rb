@@ -430,7 +430,7 @@ else
   # Check for required sections
 
   # 1. Statement of need (always required)
-  if paper_file_text =~ /# Statement of Need/i
+  if paper_file_text =~ /# Statement of need/i
     statement_of_need_msg = "✅ The paper includes a `Statement of need` section"
   else
     statement_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
@@ -439,25 +439,25 @@ else
   # New sections (only checked if NOT pre-2026)
   section_checks = []
   unless is_pre_2026
-    # 2. State of the Field
-    if paper_file_text =~ /# State of the Field/i
-      section_checks << "✅ The paper includes a `State of the Field` section"
+    # 2. State of the field
+    if paper_file_text =~ /# State of the field/i
+      section_checks << "✅ The paper includes a `State of the field` section"
     else
-      section_checks << "🔴 Failed to discover a `State of the Field` section in paper"
+      section_checks << "🔴 Failed to discover a `State of the field` section in paper"
     end
 
-    # 3. Software Design
+    # 3. Software design
     if paper_file_text =~ /# Software Design/i
-      section_checks << "✅ The paper includes a `Software Design` section"
+      section_checks << "✅ The paper includes a `Software design` section"
     else
-      section_checks << "🔴 Failed to discover a `Software Design` section in paper"
+      section_checks << "🔴 Failed to discover a `Software design` section in paper"
     end
 
-    # 4. Research Impact Statement
-    if paper_file_text =~ /# Research Impact( Statement)?/i
-      section_checks << "✅ The paper includes a `Research Impact Statement` section"
+    # 4. Research impact statement
+    if paper_file_text =~ /# Research impact( statement)?/i
+      section_checks << "✅ The paper includes a `Research impact statement` section"
     else
-      section_checks << "🔴 Failed to discover a `Research Impact Statement` section in paper"
+      section_checks << "🔴 Failed to discover a `Research impact statement` section in paper"
     end
 
     # 5. AI usage disclosure
