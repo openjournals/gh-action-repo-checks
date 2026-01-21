@@ -447,7 +447,7 @@ else
     end
 
     # 3. Software design
-    if paper_file_text =~ /# Software Design/i
+    if paper_file_text =~ /# Software design/i
       section_checks << "✅ The paper includes a `Software design` section"
     else
       section_checks << "🔴 Failed to discover a `Software design` section in paper"
