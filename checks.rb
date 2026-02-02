@@ -469,7 +469,7 @@ else
   end
 
   # Build message results
-  section_messages = [statement_of_need_msg, *section_checks].join("\n\n    ")
+  section_messages = [statement_of_need_msg, *section_checks].join("\n\n")
 
   paper_info = <<~PAPERFILEINFO
     **Paper file info**:
