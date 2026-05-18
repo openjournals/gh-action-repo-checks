@@ -436,40 +436,8 @@ else
     statement_of_need_msg = "🔴 Failed to discover a `Statement of need` section in paper"
   end
 
-  # New sections (only checked if NOT pre-2026)
-  section_checks = []
-  unless is_pre_2026
-    # 2. State of the field
-    if paper_file_text =~ /# State of the field/i
-      section_checks << "✅ The paper includes a `State of the field` section"
-    else
-      section_checks << "🔴 Failed to discover a `State of the field` section in paper"
-    end
-
-    # 3. Software design
-    if paper_file_text =~ /# Software design/i
-      section_checks << "✅ The paper includes a `Software design` section"
-    else
-      section_checks << "🔴 Failed to discover a `Software design` section in paper"
-    end
-
-    # 4. Research impact statement
-    if paper_file_text =~ /# Research impact( statement)?/i
-      section_checks << "✅ The paper includes a `Research impact statement` section"
-    else
-      section_checks << "🔴 Failed to discover a `Research impact statement` section in paper"
-    end
-
-    # 5. AI usage disclosure
-    if paper_file_text =~ /# AI (usage|use) disclosure/i
-      section_checks << "✅ The paper includes an `AI usage disclosure` section"
-    else
-      section_checks << "🔴 Failed to discover an `AI usage disclosure` section in paper"
-    end
-  end
-
   # Build message results
-  section_messages = [statement_of_need_msg, *section_checks].join("\n\n")
+  section_messages = statement_of_need_msg
 
   paper_info = <<~PAPERFILEINFO
     **Paper file info**:
