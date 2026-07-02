@@ -133,7 +133,7 @@ def parse_github_url(repo_url)
   return nil if repo_url.nil? || repo_url.empty?
 
   # Match github.com URLs
-  match = repo_url.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/i)
+  match = repo_url.match(/github\.com[\/:]([^\/]+)\/([^\/]+?)(?:\.git)?\/?$/i)
   return nil unless match
 
   {
